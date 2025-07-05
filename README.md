@@ -51,7 +51,54 @@ bao gồm các trường như : Protocol , Src , src-port ,direction , dst , dst
 * src-port, dst-port : chỉ định các cổng : có thể là 80 , 53 , hoặc trong 1 khoảng như 100-500 ,-500 (từ 1 đến 500) ...
 * direction : có 2 hướng là -> chỉ định nguồn đến đích và <-> hoặc cả 2 hướng
 
+Rules Options : 
+
+##### General Rule Options
+
+Các tùy chọn quy tắc chung cung cấp thông tin về một quy tắc, nhưng chúng hoàn toàn không thay đổi những gì một quy tắc nhất định tìm kiếm trong một gói
+
+![image](https://github.com/user-attachments/assets/44d8e519-32d4-401f-be70-d113589e7bbb)
+
+###### 1. msg 
+msg : Được sử dụng để thêm một thông báo mô tả quy tắc. Thông điệp nên tóm tắt mục đích của quy tắc và nó sẽ được xuất ra cùng với các sự kiện được tạo bởi quy tắc.
+
+format : ```msg:"message";```
+
+###### 2. reference
+refence : sử dụng để chèn thêm thông tin tham khảo ngoài vào cảnh báo, thường để chỉ nguồn gốc, tiêu chuẩn hoặc CVE liên quan đến lỗ hổng/tấn công mà rule phát hiện.
+
+format :
+```reference:scheme,id;```
+
+ví dụ : reference:url|cve,www.example.com;
+
+###### 3. gid
+gid (group id) : Từ khóa GID có thể được sử dụng để cung cấp cho các nhóm chữ ký khác nhau một giá trị ID khác (như trong SID). Suricata theo mặc định sử dụng Gid 1. Có thể sửa đổi giá trị mặc định. 
+
+###### 4. sid 
+sid : Số hiêu xác định duy nhất một quy tắc. không thể có 2 rule có cùng 1 sid . sid có thể có giá trị bất kỳ >0 . Có 1 số quy chuẩn để đặt rule như sau https://sidallocation.org/
+
+###### 5. rev
+rev : Xác định phiên bản sửa đổi của một quy tắc đã cho. Tùy chọn này nên được sử dụng cùng với từ khóa SID và nên được tăng lên mỗi lần thay đổi theo quy tắc.
+
+ví dụ : 
+```
+sid:1000001; rev:1;
+sid:1000001; rev:2;
+```
+
+###### 6. classtype 
+classtype : Cung cấp thông tin về việc phân loại các quy tắc và cảnh báo. Nó bao gồm một tên ngắn, một tên dài và một ưu tiên. Nó có thể cho biết ví dụ liệu một quy tắc chỉ là thông tin hay là về CVE. 
+- Trong suricata classtype được quy định về phân loại và mức độc trên file /etc/suricata/classification.config
+
+###### 7. priority 
+priority : Đi kèm với một giá trị số bắt buộc có thể nằm trong khoảng từ 1 đến 255. Các giá trị 1 đến 4 thường được sử dụng. Ưu tiên cao nhất là 1. Chữ ký với mức độ ưu tiên cao hơn sẽ được kiểm tra trước. Thông thường các chữ ký có mức độ ưu tiên được xác định thông qua định nghĩa classtype
+
+##### Payload Detection Rule Options
+
+
 ví dụ về 1 rule :
+
 
 ```alert http $HOME_NET any -> $EXTERNAL_NET any (msg:"HTTP GET Request Containing Rule in URI"; flow:established,to_server; http.method; content:"GET"; http.uri; content:"rule"; fast_pattern; classtype:bad-unknown; sid:123; rev:1;)```
 
@@ -92,6 +139,20 @@ luật phát hiện :
 ![image](https://github.com/user-attachments/assets/a6ce8876-b4aa-4599-bc01-dfa2facd49d7)
 
 #### Phát hiện tấn công SQLi 
+```
+alert http any any -> any any (msg: "Possible SQL Injection attack contain single quote in GET method"; flow:established,to_server; content:"'"; nocase; http_uri; sid:2000001;)
+alert http any any -> any any (msg: "Possible SQL Injection attack contain UNION in Get method"; flow:established,to_server; content:"union"; nocase;  http_uri; sid:2000002;)
+alert http any any -> any any (msg: "Possible SQL Injection attack contain SELECT in GET method"; flow:established,to_server; content:"select"; nocase;  http_uri; sid:2000003;)
+alert http any any -> any any (msg: "Possible SQL Injection attack contain single quote in POST method"; flow:established,to_server; content:"'"; nocase; http_client_body; sid:2000004;)
+alert http any any -> any any (msg: "Possible SQL Injection attack contain UNION in POST method"; flow:established,to_server; content:"union"; nocase;  http_client_body; sid:2000005;)
+alert http any any -> any any (msg: "Possible SQL Injection attack contain SELECT in POST method"; flow:established,to_server; content:"select"; nocase;  http_client_body; sid:2000006;)
+```
 
+#### Phát hiện tấn công XSS 
 
+```
+alert http any any -> any any (msg:"Possible XSS attack, script tag"; content:"script"; nocase; pcre:"/(<|%3C|%253C)script/smi"; classtype:web-application-attack; sid:300001; rev:1;)
+alert http any any -> any any (msg:"Possible XSS attack, js event handler"; content:"on"; nocase; pcre:"/on\w+(%3D|=)/smi"; classtype:web-application-attack; sid:300002; rev:1;)
+alert http any any -> any any (msg:"Possible XSS attack, js protocol"; content:"javascript"; nocase; pcre:"/javascript(:|%3A)/smi"; classtype:web-application-attack; sid:300003; rev:1;)
+```
 
